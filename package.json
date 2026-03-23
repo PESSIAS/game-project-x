@@ -1,0 +1,27 @@
+{
+  "name": "game-project-x",
+  "version": "1.0.0",
+  "description": "Game Project X",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PESSIAS/game-project-x.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/PESSIAS/game-project-x/issues"
+  },
+  "homepage": "https://github.com/PESSIAS/game-project-x#readme",
+  "dependencies": {
+    "three": "^0.183.2",
+    "vite": "^8.0.2"
+  },
+  "type": "module"
+}
