@@ -108,7 +108,7 @@ const laneHalfWidth = 8;
 const surfPlanes = [];
 const floorSegments = [];
 const finishZ = 236;
-const resetPoint = new THREE.Vector3(0, 4, -8);
+const resetPoint = new THREE.Vector3(-1.8, 4.4, -10);
 
 const gravity = new THREE.Vector3(0, -28, 0);
 const cameraTarget = new THREE.Vector3();
@@ -129,7 +129,7 @@ function addMarker(x, y, z, height = 0.55) {
 }
 
 function addFloorSegment(width, depth, center) {
-  const mesh = addPlatform(width, depth, center, platformMaterial, 0.6);
+  addPlatform(width, depth, center, platformMaterial, 0.6);
   floorSegments.push({
     xMin: center.x - width / 2,
     xMax: center.x + width / 2,
@@ -137,7 +137,6 @@ function addFloorSegment(width, depth, center) {
     zMax: center.z + depth / 2,
     y: center.y + 0.3,
   });
-  return mesh;
 }
 
 function addSurfRamp({ anchorX, centerZ, baseY, width, length, height, side }) {
@@ -183,11 +182,11 @@ function addSurfRamp({ anchorX, centerZ, baseY, width, length, height, side }) {
     normal,
     tangentDown: new THREE.Vector3(0, -1, 0).projectOnPlane(normal).normalize(),
     targetDir: isLeft ? -1 : 1,
-    baseY,
   });
 }
 
-addFloorSegment(18, 26, new THREE.Vector3(0, 0, 0));
+addFloorSegment(22, 30, new THREE.Vector3(0, 3.2, -8));
+addFloorSegment(12, 18, new THREE.Vector3(-3.2, 2.8, 3));
 
 const rampLayout = [
   { side: "left", anchorX: -0.8, centerZ: 18, baseY: 0, width: 6, length: 16, height: 3.6 },
@@ -211,7 +210,7 @@ addFloorSegment(22, 22, new THREE.Vector3(0, 14.8, finishZ));
 
 for (let z = -6; z <= finishZ; z += 10) {
   const t = Math.max(0, Math.min(1, z / finishZ));
-  const y = t * 14;
+  const y = 2 + t * 12;
   addMarker(-laneHalfWidth, y, z, 0.34);
   addMarker(laneHalfWidth, y, z, 0.34);
 }
@@ -279,7 +278,7 @@ const state = {
 
 function resetPlayer() {
   player.position.copy(resetPoint);
-  state.velocity.set(0, -2, 9);
+  state.velocity.set(0.4, -1.5, 11.5);
   state.speed = state.velocity.length();
   state.surfing = false;
   state.surfSide = "none";
@@ -334,7 +333,7 @@ function updatePlayer(delta) {
     state.velocity.z *= scale;
   }
 
-  let nextPosition = player.position.clone().addScaledVector(state.velocity, delta);
+  const nextPosition = player.position.clone().addScaledVector(state.velocity, delta);
   const surfContact = findSurfContact(nextPosition);
   state.surfing = false;
   state.surfSide = "none";
