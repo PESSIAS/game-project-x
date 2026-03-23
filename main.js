@@ -113,7 +113,6 @@ const tempVec = new THREE.Vector3();
 const gravity = new THREE.Vector3(0, -24, 0);
 const cameraLookTarget = new THREE.Vector3();
 const cameraTarget = new THREE.Vector3();
-const worldUp = new THREE.Vector3(0, 1, 0);
 
 function addFloor(width, depth, z) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, 0.5, depth), trackMaterial);
@@ -146,44 +145,44 @@ function addSurfRamp({ x, z, width = 6, length = 10, height = 3.4, side = "left"
   const ramp = new THREE.Mesh(geometry, material);
 
   if (isLeft) {
-    ramp.position.set(x, floorY, z + length / 2);
-  } else {
     ramp.scale.x = -1;
     ramp.position.set(x, floorY, z - length / 2);
+  } else {
+    ramp.position.set(x, floorY, z + length / 2);
   }
 
   world.add(ramp);
 
   const normal = isLeft
-    ? new THREE.Vector3(height, width, 0).normalize()
-    : new THREE.Vector3(-height, width, 0).normalize();
+    ? new THREE.Vector3(-height, width, 0).normalize()
+    : new THREE.Vector3(height, width, 0).normalize();
 
   const planePoint = new THREE.Vector3(
-    isLeft ? x + width * 0.5 : x - width * 0.5,
+    isLeft ? x - width * 0.5 : x + width * 0.5,
     height * 0.5,
     z
   );
 
   surfPlanes.push({
     side,
-    xMin: isLeft ? x : x - width,
-    xMax: isLeft ? x + width : x,
+    xMin: isLeft ? x - width : x,
+    xMax: isLeft ? x : x + width,
     zMin: z - length / 2,
     zMax: z + length / 2,
     plane: new THREE.Plane().setFromNormalAndCoplanarPoint(normal, planePoint),
     normal,
     boost: 15 + height * 0.6,
-    targetDir: isLeft ? 1 : -1,
+    targetDir: isLeft ? -1 : 1,
   });
 }
 
 addFloor(18, 20, 0);
-addSurfRamp({ side: "left", x: -6.5, z: 14, width: 6, length: 12, height: 3.5 });
-addSurfRamp({ side: "right", x: 6.5, z: 28, width: 6, length: 12, height: 3.5 });
-addSurfRamp({ side: "left", x: -6.5, z: 42, width: 6.5, length: 14, height: 3.8 });
-addSurfRamp({ side: "right", x: 6.5, z: 58, width: 6.5, length: 14, height: 3.8 });
-addSurfRamp({ side: "left", x: -7, z: 76, width: 7, length: 16, height: 4.1 });
-addSurfRamp({ side: "right", x: 7, z: 96, width: 7, length: 16, height: 4.1 });
+addSurfRamp({ side: "left", x: -0.5, z: 14, width: 6, length: 12, height: 3.5 });
+addSurfRamp({ side: "right", x: 0.5, z: 28, width: 6, length: 12, height: 3.5 });
+addSurfRamp({ side: "left", x: -0.5, z: 42, width: 6.5, length: 14, height: 3.8 });
+addSurfRamp({ side: "right", x: 0.5, z: 58, width: 6.5, length: 14, height: 3.8 });
+addSurfRamp({ side: "left", x: 0, z: 76, width: 7, length: 16, height: 4.1 });
+addSurfRamp({ side: "right", x: 0, z: 96, width: 7, length: 16, height: 4.1 });
 addFloor(18, 18, 118);
 
 for (let z = -4; z <= 118; z += 8) {
@@ -230,7 +229,7 @@ function updateJoystick(clientX, clientY) {
   }
 
   joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
-  input.x = dx / knobRadius;
+  input.x = -(dx / knobRadius);
   input.y = dy / knobRadius;
 }
 
@@ -304,7 +303,7 @@ function updatePlayer(delta) {
   state.velocity.addScaledVector(gravity, delta);
 
   let nextPosition = player.position.clone().addScaledVector(state.velocity, delta);
-  let surfContact = findSurfContact(nextPosition);
+  const surfContact = findSurfContact(nextPosition);
 
   state.surfing = false;
   state.surfSide = "none";
