@@ -108,7 +108,7 @@ const laneHalfWidth = 8;
 const surfPlanes = [];
 const floorSegments = [];
 const finishZ = 236;
-const resetPoint = new THREE.Vector3(0, 2.2, -14);
+const resetPoint = new THREE.Vector3(0, 1.2, -22);
 
 const gravity = new THREE.Vector3(0, -28, 0);
 const cameraTarget = new THREE.Vector3();
@@ -185,13 +185,12 @@ function addSurfRamp({ anchorX, centerZ, baseY, width, length, height, side }) {
   });
 }
 
-addFloorSegment(16, 18, new THREE.Vector3(0, 1.0, -12));
-addFloorSegment(12, 12, new THREE.Vector3(0, 0.6, -2));
+addFloorSegment(12, 10, new THREE.Vector3(0, 0.0, -22));
 
 const rampLayout = [
-  { side: "left", anchorX: -0.6, centerZ: 14, baseY: 0, width: 8.6, length: 24, height: 5.4 },
-  { side: "right", anchorX: 1.2, centerZ: 42, baseY: 2.2, width: 6.4, length: 16, height: 4.4 },
-  { side: "left", anchorX: -1.5, centerZ: 68, baseY: 4.2, width: 7.4, length: 18, height: 4.8 },
+  { side: "left", anchorX: -0.4, centerZ: -2, baseY: -0.2, width: 8.2, length: 28, height: 5.4 },
+  { side: "right", anchorX: 1.0, centerZ: 34, baseY: 2.0, width: 6.4, length: 18, height: 4.4 },
+  { side: "left", anchorX: -1.5, centerZ: 62, baseY: 4.2, width: 7.4, length: 18, height: 4.8 },
   { side: "right", anchorX: 1.6, centerZ: 96, baseY: 3.0, width: 6.6, length: 20, height: 4.3 },
   { side: "left", anchorX: -2.2, centerZ: 124, baseY: 5.2, width: 8.2, length: 22, height: 5.2 },
   { side: "right", anchorX: 2.2, centerZ: 154, baseY: 7.8, width: 7.4, length: 18, height: 5.5 },
@@ -277,7 +276,7 @@ const state = {
 
 function resetPlayer() {
   player.position.copy(resetPoint);
-  state.velocity.set(0, 0, 11);
+  state.velocity.set(0, 0, 9.5);
   state.speed = state.velocity.length();
   state.surfing = false;
   state.surfSide = "none";
@@ -398,16 +397,16 @@ function updatePlayer(delta) {
 
 function updateCamera(delta) {
   cameraTarget.set(
-    player.position.x * 0.45,
-    player.position.y + 4.6,
-    player.position.z - 10.5
+    player.position.x * 0.28,
+    player.position.y + 4.2,
+    player.position.z - 9.2
   );
   camera.position.lerp(cameraTarget, 3.8 * delta);
 
   cameraLookTarget.set(
-    player.position.x * 0.65,
-    player.position.y + 1.1,
-    player.position.z + 16
+    player.position.x * 0.35,
+    player.position.y + 0.9,
+    player.position.z + 18
   );
   camera.lookAt(cameraLookTarget);
 
