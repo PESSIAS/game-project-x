@@ -14,8 +14,8 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
-// Cube
-const geometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+// Sphere
+const geometry = new THREE.SphereGeometry(1, 32, 32);
 const material = new THREE.MeshStandardMaterial({ color: 0xffff00, metalness: 0.3, roughness: 0.4 });
 const cube = new THREE.Mesh(geometry, material);
 scene.add(cube);
