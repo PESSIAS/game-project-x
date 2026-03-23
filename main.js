@@ -108,7 +108,7 @@ const laneHalfWidth = 8;
 const surfPlanes = [];
 const floorSegments = [];
 const finishZ = 236;
-const resetPoint = new THREE.Vector3(-1.8, 2.6, -30);
+const resetPoint = new THREE.Vector3(-1.8, 2.0, -31);
 
 const gravity = new THREE.Vector3(0, -28, 0);
 const cameraTarget = new THREE.Vector3();
@@ -185,16 +185,16 @@ function addSurfRamp({ anchorX, centerZ, baseY, width, length, height, side }) {
   });
 }
 
-addFloorSegment(14, 20, new THREE.Vector3(0, 0.0, -24));
+addFloorSegment(12, 10, new THREE.Vector3(0, 0.0, -28));
+addFloorSegment(10, 8, new THREE.Vector3(0, -0.8, -14));
 
-addSurfRamp({ side: "left", anchorX: -0.2, centerZ: -6, baseY: -2.2, width: 8.4, length: 20, height: 4.8 });
+addSurfRamp({ side: "left", anchorX: -0.2, centerZ: 6, baseY: -2.4, width: 8.4, length: 24, height: 4.8 });
 
-addFloorSegment(12, 16, new THREE.Vector3(0, -0.6, 14));
-addFloorSegment(10, 12, new THREE.Vector3(-1.6, -0.15, 28));
+addFloorSegment(12, 16, new THREE.Vector3(0, -0.8, 28));
 
 const rampLayout = [
-  { side: "right", anchorX: 1.0, centerZ: 42, baseY: 2.0, width: 6.4, length: 18, height: 4.4 },
-  { side: "left", anchorX: -1.5, centerZ: 62, baseY: 4.2, width: 7.4, length: 18, height: 4.8 },
+  { side: "right", anchorX: 1.0, centerZ: 54, baseY: 2.0, width: 6.4, length: 18, height: 4.4 },
+  { side: "left", anchorX: -1.5, centerZ: 82, baseY: 4.2, width: 7.4, length: 18, height: 4.8 },
   { side: "right", anchorX: 1.0, centerZ: 34, baseY: 2.0, width: 6.4, length: 18, height: 4.4 },
   { side: "left", anchorX: -1.5, centerZ: 62, baseY: 4.2, width: 7.4, length: 18, height: 4.8 },
   { side: "right", anchorX: 1.6, centerZ: 96, baseY: 3.0, width: 6.6, length: 20, height: 4.3 },
@@ -282,7 +282,7 @@ const state = {
 
 function resetPlayer() {
   player.position.copy(resetPoint);
-  state.velocity.set(1.4, -1.5, 8.8);
+  state.velocity.set(1.6, -0.8, 8.4);
   state.speed = state.velocity.length();
   state.surfing = false;
   state.surfSide = "none";
