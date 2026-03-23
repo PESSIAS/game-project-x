@@ -16,7 +16,7 @@ document.body.appendChild(renderer.domElement);
 
 // Cube
 const geometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
-const material = new THREE.MeshStandardMaterial({ color: 0x00d4ff, metalness: 0.3, roughness: 0.4 });
+const material = new THREE.MeshStandardMaterial({ color: 0xff0000, metalness: 0.3, roughness: 0.4 });
 const cube = new THREE.Mesh(geometry, material);
 scene.add(cube);
 
