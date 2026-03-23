@@ -2,9 +2,9 @@ import * as THREE from "three";
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x120a1f);
-scene.fog = new THREE.Fog(0x120a1f, 50, 240);
+scene.fog = new THREE.Fog(0x120a1f, 40, 180);
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 1000);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -20,17 +20,16 @@ hud.style.left = "16px";
 hud.style.color = "#f8f4ff";
 hud.style.fontFamily = "Arial, sans-serif";
 hud.style.fontSize = "18px";
-hud.style.lineHeight = "1.5";
+hud.style.lineHeight = "1.45";
 hud.style.textShadow = "0 2px 12px rgba(0,0,0,0.45)";
 hud.style.zIndex = "10";
-hud.innerHTML = "Surf MVP";
 document.body.appendChild(hud);
 
 const hint = document.createElement("div");
 hint.style.position = "fixed";
 hint.style.top = "16px";
 hint.style.right = "16px";
-hint.style.maxWidth = "280px";
+hint.style.maxWidth = "270px";
 hint.style.color = "#d9cfff";
 hint.style.fontFamily = "Arial, sans-serif";
 hint.style.fontSize = "14px";
@@ -38,7 +37,7 @@ hint.style.lineHeight = "1.4";
 hint.style.textAlign = "right";
 hint.style.textShadow = "0 2px 12px rgba(0,0,0,0.45)";
 hint.style.zIndex = "10";
-hint.innerHTML = "A/D or arrows to surf.<br>On mobile, drag the joystick.<br>Ride down angled faces to gain speed and transfer between ramps.";
+hint.innerHTML = "A/D or arrows to steer.<br>On mobile, drag the joystick.<br>Land on angled ramps and swap sides.";
 document.body.appendChild(hint);
 
 const joystickBase = document.createElement("div");
@@ -66,18 +65,17 @@ joystickKnob.style.background = "rgba(255,255,255,0.28)";
 joystickKnob.style.border = "1px solid rgba(255,255,255,0.35)";
 joystickBase.appendChild(joystickKnob);
 
-const world = new THREE.Group();
-scene.add(world);
-
-scene.add(new THREE.AmbientLight(0xffffff, 0.62));
-
-const sunLight = new THREE.DirectionalLight(0xffffff, 1.25);
-sunLight.position.set(10, 16, 6);
+scene.add(new THREE.AmbientLight(0xffffff, 0.68));
+const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+sunLight.position.set(10, 14, 8);
 scene.add(sunLight);
 
-const fillLight = new THREE.PointLight(0x8844ff, 20, 90);
-fillLight.position.set(0, 12, -12);
+const fillLight = new THREE.PointLight(0x8844ff, 18, 80);
+fillLight.position.set(0, 10, -8);
 scene.add(fillLight);
+
+const world = new THREE.Group();
+scene.add(world);
 
 const playerRadius = 0.6;
 const player = new THREE.Mesh(
@@ -92,54 +90,51 @@ const player = new THREE.Mesh(
 scene.add(player);
 
 const trail = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.08, 0.15, 3.1, 12),
-  new THREE.MeshBasicMaterial({ color: 0xffdd66, transparent: true, opacity: 0.3 })
+  new THREE.CylinderGeometry(0.08, 0.16, 3.2, 12),
+  new THREE.MeshBasicMaterial({ color: 0xffd95a, transparent: true, opacity: 0.28 })
 );
 trail.rotation.x = Math.PI / 2;
 scene.add(trail);
 
-const trackMaterial = new THREE.MeshStandardMaterial({ color: 0x2a183f, roughness: 0.94, metalness: 0.03 });
-const surfMaterialLeft = new THREE.MeshStandardMaterial({ color: 0x35cfff, emissive: 0x09202f, roughness: 0.56 });
-const surfMaterialRight = new THREE.MeshStandardMaterial({ color: 0xff58d2, emissive: 0x351327, roughness: 0.56 });
-const markerMaterial = new THREE.MeshStandardMaterial({ color: 0x8f73dd, emissive: 0x231533, roughness: 0.62 });
-const platformMaterial = new THREE.MeshStandardMaterial({ color: 0x483061, roughness: 0.86, metalness: 0.05 });
+const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x44305f, roughness: 0.88, metalness: 0.04 });
+const leftRampMaterial = new THREE.MeshStandardMaterial({ color: 0x35d0ff, emissive: 0x0b2230, roughness: 0.55 });
+const rightRampMaterial = new THREE.MeshStandardMaterial({ color: 0xff58d2, emissive: 0x321126, roughness: 0.55 });
+const markerMaterial = new THREE.MeshStandardMaterial({ color: 0x9578e7, emissive: 0x241637, roughness: 0.6 });
 
-const laneHalfWidth = 8;
-const surfPlanes = [];
 const floorSegments = [];
-const finishZ = 236;
-const resetPoint = new THREE.Vector3(-1.8, 2.0, -31);
-
-const gravity = new THREE.Vector3(0, -28, 0);
+const ramps = [];
+const laneHalfWidth = 8;
+const finishZ = 108;
+const resetPoint = new THREE.Vector3(-2.4, 3.2, -18);
+const gravity = new THREE.Vector3(0, -30, 0);
 const cameraTarget = new THREE.Vector3();
 const cameraLookTarget = new THREE.Vector3();
-const tmpProjected = new THREE.Vector3();
+const tmpVec = new THREE.Vector3();
 
-function addPlatform(width, depth, center, material = trackMaterial, thickness = 0.6) {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, thickness, depth), material);
-  mesh.position.copy(center);
+function addBox(width, height, depth, x, y, z, material) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material);
+  mesh.position.set(x, y, z);
   world.add(mesh);
   return mesh;
 }
 
-function addMarker(x, y, z, height = 0.55) {
-  const marker = new THREE.Mesh(new THREE.BoxGeometry(0.24, height, 4), markerMaterial);
-  marker.position.set(x, y + height / 2, z);
-  world.add(marker);
-}
-
-function addFloorSegment(width, depth, center) {
-  addPlatform(width, depth, center, platformMaterial, 0.6);
+function addFloor(width, depth, x, y, z) {
+  addBox(width, 0.8, depth, x, y - 0.4, z, floorMaterial);
   floorSegments.push({
-    xMin: center.x - width / 2,
-    xMax: center.x + width / 2,
-    zMin: center.z - depth / 2,
-    zMax: center.z + depth / 2,
-    y: center.y + 0.3,
+    xMin: x - width / 2,
+    xMax: x + width / 2,
+    zMin: z - depth / 2,
+    zMax: z + depth / 2,
+    y,
   });
 }
 
-function addSurfRamp({ anchorX, centerZ, baseY, width, length, height, side }) {
+function addGuide(x, y, z) {
+  addBox(0.24, 0.45, 4, x, y + 0.22, z, markerMaterial);
+}
+
+function addRamp({ side, z, width, length, topY, bottomY }) {
+  const height = topY - bottomY;
   const shape = new THREE.Shape();
   shape.moveTo(0, 0);
   shape.lineTo(width, 0);
@@ -149,78 +144,53 @@ function addSurfRamp({ anchorX, centerZ, baseY, width, length, height, side }) {
   const geometry = new THREE.ExtrudeGeometry(shape, { depth: length, bevelEnabled: false });
   geometry.rotateY(Math.PI);
 
-  const isLeft = side === "left";
-  const material = isLeft ? surfMaterialLeft : surfMaterialRight;
-  const ramp = new THREE.Mesh(geometry, material);
+  const left = side === "left";
+  const material = left ? leftRampMaterial : rightRampMaterial;
+  const mesh = new THREE.Mesh(geometry, material);
 
-  if (isLeft) {
-    ramp.scale.x = -1;
-    ramp.position.set(anchorX, baseY, centerZ - length / 2);
+  if (left) {
+    mesh.scale.x = -1;
+    mesh.position.set(0, bottomY, z - length / 2);
   } else {
-    ramp.position.set(anchorX, baseY, centerZ + length / 2);
+    mesh.position.set(0, bottomY, z + length / 2);
   }
+  world.add(mesh);
 
-  world.add(ramp);
-
-  const normal = isLeft
+  const normal = left
     ? new THREE.Vector3(-height, width, 0).normalize()
     : new THREE.Vector3(height, width, 0).normalize();
 
-  const planePoint = new THREE.Vector3(
-    isLeft ? anchorX - width * 0.5 : anchorX + width * 0.5,
-    baseY + height * 0.5,
-    centerZ
-  );
+  const planePoint = new THREE.Vector3(left ? -width / 2 : width / 2, bottomY + height / 2, z);
 
-  surfPlanes.push({
+  ramps.push({
     side,
-    xMin: isLeft ? anchorX - width : anchorX,
-    xMax: isLeft ? anchorX : anchorX + width,
-    zMin: centerZ - length / 2,
-    zMax: centerZ + length / 2,
+    width,
+    zMin: z - length / 2,
+    zMax: z + length / 2,
+    xMin: left ? -width : 0,
+    xMax: left ? 0 : width,
     plane: new THREE.Plane().setFromNormalAndCoplanarPoint(normal, planePoint),
     normal,
-    tangentDown: new THREE.Vector3(0, -1, 0).projectOnPlane(normal).normalize(),
-    targetDir: isLeft ? -1 : 1,
+    downhill: new THREE.Vector3(0, -1, 0).projectOnPlane(normal).normalize(),
+    targetDir: left ? -1 : 1,
   });
 }
 
-addFloorSegment(12, 10, new THREE.Vector3(0, 0.0, -28));
-addFloorSegment(10, 8, new THREE.Vector3(0, -0.8, -14));
+addFloor(12, 12, 0, 2.2, -20);
+addRamp({ side: "left", z: -2, width: 8, length: 28, topY: 2.2, bottomY: -1.8 });
+addFloor(12, 12, 0, -1.8, 18);
+addRamp({ side: "right", z: 38, width: 8, length: 24, topY: 2.8, bottomY: -1.0 });
+addFloor(12, 10, 0, -1.0, 58 });
+addRamp({ side: "left", z: 76, width: 8.5, length: 24, topY: 3.0, bottomY: -0.6 });
+addFloor(16, 12, 0, -0.6, finishZ);
 
-addSurfRamp({ side: "left", anchorX: -0.2, centerZ: 6, baseY: -2.4, width: 8.4, length: 24, height: 4.8 });
-
-addFloorSegment(12, 16, new THREE.Vector3(0, -0.8, 28));
-
-const rampLayout = [
-  { side: "right", anchorX: 1.0, centerZ: 54, baseY: 2.0, width: 6.4, length: 18, height: 4.4 },
-  { side: "left", anchorX: -1.5, centerZ: 82, baseY: 4.2, width: 7.4, length: 18, height: 4.8 },
-  { side: "right", anchorX: 1.0, centerZ: 34, baseY: 2.0, width: 6.4, length: 18, height: 4.4 },
-  { side: "left", anchorX: -1.5, centerZ: 62, baseY: 4.2, width: 7.4, length: 18, height: 4.8 },
-  { side: "right", anchorX: 1.6, centerZ: 96, baseY: 3.0, width: 6.6, length: 20, height: 4.3 },
-  { side: "left", anchorX: -2.2, centerZ: 124, baseY: 5.2, width: 8.2, length: 22, height: 5.2 },
-  { side: "right", anchorX: 2.2, centerZ: 154, baseY: 7.8, width: 7.4, length: 18, height: 5.5 },
-  { side: "left", anchorX: -1.8, centerZ: 184, baseY: 10.2, width: 8.4, length: 20, height: 5.8 },
-  { side: "right", anchorX: 2.8, centerZ: 214, baseY: 12.8, width: 9, length: 24, height: 6.2 },
-];
-
-for (const ramp of rampLayout) {
-  addSurfRamp(ramp);
-  addMarker(-laneHalfWidth, ramp.baseY, ramp.centerZ, 0.42);
-  addMarker(laneHalfWidth, ramp.baseY, ramp.centerZ, 0.42);
-}
-
-addFloorSegment(22, 22, new THREE.Vector3(0, 14.8, finishZ));
-
-for (let z = -6; z <= finishZ; z += 10) {
-  const t = Math.max(0, Math.min(1, z / finishZ));
-  const y = 2 + t * 12;
-  addMarker(-laneHalfWidth, y, z, 0.34);
-  addMarker(laneHalfWidth, y, z, 0.34);
+for (let z = -20; z <= finishZ; z += 10) {
+  addGuide(-laneHalfWidth, 0, z);
+  addGuide(laneHalfWidth, 0, z);
 }
 
 const keyboard = { left: false, right: false };
-const input = { x: 0, y: 0 };
+const input = { x: 0 };
 
 window.addEventListener("keydown", (event) => {
   if (event.key === "a" || event.key === "ArrowLeft") keyboard.left = true;
@@ -250,14 +220,12 @@ function updateJoystick(clientX, clientY) {
 
   joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
   input.x = -(dx / knobRadius);
-  input.y = dy / knobRadius;
 }
 
 function releaseJoystick() {
   pointerActive = false;
   joystickKnob.style.transform = "translate(0px, 0px)";
   input.x = 0;
-  input.y = 0;
 }
 
 joystickBase.addEventListener("pointerdown", (event) => {
@@ -272,9 +240,9 @@ joystickBase.addEventListener("pointerup", releaseJoystick);
 joystickBase.addEventListener("pointercancel", releaseJoystick);
 
 const state = {
-  velocity: new THREE.Vector3(0, 0, 8),
-  speed: 8,
-  bestSpeed: 8,
+  velocity: new THREE.Vector3(0, 0, 0),
+  speed: 0,
+  bestSpeed: 0,
   surfing: false,
   surfSide: "none",
   finished: false,
@@ -282,8 +250,9 @@ const state = {
 
 function resetPlayer() {
   player.position.copy(resetPoint);
-  state.velocity.set(1.6, -0.8, 8.4);
+  state.velocity.set(1.5, 0, 9);
   state.speed = state.velocity.length();
+  state.bestSpeed = Math.max(state.bestSpeed, state.speed);
   state.surfing = false;
   state.surfSide = "none";
   state.finished = false;
@@ -296,26 +265,26 @@ function getControlX() {
   return Math.abs(input.x) > 0.01 ? input.x : keyboardX;
 }
 
-function findFloorHeight(position) {
-  let bestHeight = -Infinity;
+function getFloorHeight(position) {
+  let best = -Infinity;
   for (const floor of floorSegments) {
     if (position.x >= floor.xMin && position.x <= floor.xMax && position.z >= floor.zMin && position.z <= floor.zMax) {
-      bestHeight = Math.max(bestHeight, floor.y + playerRadius);
+      best = Math.max(best, floor.y + playerRadius);
     }
   }
-  return bestHeight;
+  return best;
 }
 
-function findSurfContact(position) {
-  for (const surf of surfPlanes) {
-    if (position.z < surf.zMin || position.z > surf.zMax) continue;
-    if (position.x < surf.xMin - playerRadius || position.x > surf.xMax + playerRadius) continue;
+function getRampContact(position) {
+  for (const ramp of ramps) {
+    if (position.z < ramp.zMin || position.z > ramp.zMax) continue;
+    if (position.x < ramp.xMin - playerRadius || position.x > ramp.xMax + playerRadius) continue;
 
-    const distance = surf.plane.distanceToPoint(position);
-    if (distance >= -0.25 && distance <= playerRadius + 0.28) {
-      const projected = tmpProjected.copy(position).addScaledVector(surf.normal, -distance);
-      if (projected.x >= surf.xMin - 0.15 && projected.x <= surf.xMax + 0.15) {
-        return { surf, distance };
+    const distance = ramp.plane.distanceToPoint(position);
+    if (distance >= -0.3 && distance <= playerRadius + 0.22) {
+      const projected = tmpVec.copy(position).addScaledVector(ramp.normal, -distance);
+      if (projected.x >= ramp.xMin - 0.12 && projected.x <= ramp.xMax + 0.12) {
+        return { ramp, distance };
       }
     }
   }
@@ -326,112 +295,99 @@ function updatePlayer(delta) {
   const controlX = getControlX();
 
   state.velocity.addScaledVector(gravity, delta);
-  state.velocity.x += controlX * 22 * delta;
-  state.velocity.z += Math.max(0, -input.y) * 5.5 * delta;
-
-  const horizontalSpeed = Math.hypot(state.velocity.x, state.velocity.z);
-  const maxHorizontal = state.surfing ? 38 : 24;
-  if (horizontalSpeed > maxHorizontal) {
-    const scale = maxHorizontal / horizontalSpeed;
-    state.velocity.x *= scale;
-    state.velocity.z *= scale;
-  }
+  state.velocity.x += controlX * 18 * delta;
+  state.velocity.z += 5.5 * delta;
 
   const nextPosition = player.position.clone().addScaledVector(state.velocity, delta);
-  const surfContact = findSurfContact(nextPosition);
+  const rampContact = getRampContact(nextPosition);
+
   state.surfing = false;
   state.surfSide = "none";
 
-  if (surfContact) {
-    const { surf, distance } = surfContact;
-    nextPosition.addScaledVector(surf.normal, playerRadius - distance + 0.03);
+  if (rampContact) {
+    const { ramp, distance } = rampContact;
+    nextPosition.addScaledVector(ramp.normal, playerRadius - distance + 0.02);
 
-    const intoPlane = surf.normal.dot(state.velocity);
-    if (intoPlane < 0) {
-      state.velocity.addScaledVector(surf.normal, -intoPlane);
+    const intoRamp = ramp.normal.dot(state.velocity);
+    if (intoRamp < 0) {
+      state.velocity.addScaledVector(ramp.normal, -intoRamp);
     }
 
-    const downhill = surf.tangentDown.clone();
-    const alongDownhill = state.velocity.dot(downhill);
-    const alignment = THREE.MathUtils.clamp(controlX * surf.targetDir, 0, 1);
-    const carve = 0.35 + alignment * 0.95 + Math.max(0, -input.y) * 0.35;
-
-    state.velocity.addScaledVector(downhill, carve * 34 * delta);
-    state.velocity.z += carve * 11 * delta;
-    state.velocity.x += surf.targetDir * (7 + alignment * 18) * delta;
-
-    if (alignment < 0.12) {
-      state.velocity.x *= 0.992;
-      state.velocity.z *= 0.996;
-    }
-
-    if (alongDownhill < 2) {
-      state.velocity.addScaledVector(downhill, (2 - alongDownhill) * 0.9);
-    }
+    const alignment = THREE.MathUtils.clamp(controlX * ramp.targetDir, 0, 1);
+    state.velocity.addScaledVector(ramp.downhill, (20 + alignment * 18) * delta);
+    state.velocity.x += ramp.targetDir * (8 + alignment * 14) * delta;
+    state.velocity.z += (7 + alignment * 7) * delta;
 
     state.surfing = true;
-    state.surfSide = surf.side;
+    state.surfSide = ramp.side;
   } else {
-    const floorHeight = findFloorHeight(nextPosition);
+    const floorHeight = getFloorHeight(nextPosition);
     if (floorHeight > -Infinity && nextPosition.y <= floorHeight) {
       nextPosition.y = floorHeight;
       if (state.velocity.y < 0) state.velocity.y = 0;
-      state.velocity.x *= 0.988;
-      state.velocity.z *= 0.996;
+      state.velocity.x *= 0.985;
+      state.velocity.z *= 0.995;
     }
+  }
+
+  const planarSpeed = Math.hypot(state.velocity.x, state.velocity.z);
+  const maxPlanar = state.surfing ? 34 : 22;
+  if (planarSpeed > maxPlanar) {
+    const scale = maxPlanar / planarSpeed;
+    state.velocity.x *= scale;
+    state.velocity.z *= scale;
   }
 
   player.position.copy(nextPosition);
   state.speed = state.velocity.length();
   state.bestSpeed = Math.max(state.bestSpeed, state.speed);
 
-  const horizontal = new THREE.Vector3(state.velocity.x, 0, state.velocity.z);
-  if (horizontal.lengthSq() > 0.0001) {
-    const rollAxis = new THREE.Vector3(horizontal.z, 0, -horizontal.x).normalize();
-    player.rotateOnWorldAxis(rollAxis, -(horizontal.length() * delta) / playerRadius);
+  const planar = new THREE.Vector3(state.velocity.x, 0, state.velocity.z);
+  if (planar.lengthSq() > 0.0001) {
+    const rollAxis = new THREE.Vector3(planar.z, 0, -planar.x).normalize();
+    player.rotateOnWorldAxis(rollAxis, -(planar.length() * delta) / playerRadius);
   }
 
-  if (Math.abs(player.position.x) > laneHalfWidth + 4 || player.position.y < -18) {
+  if (Math.abs(player.position.x) > laneHalfWidth + 3 || player.position.y < -12) {
     resetPlayer();
   }
 
   if (player.position.z > finishZ + 8) {
     state.finished = true;
-    state.velocity.multiplyScalar(0.992);
+    state.velocity.multiplyScalar(0.99);
   }
 }
 
 function updateCamera(delta) {
   cameraTarget.set(
-    player.position.x * 0.28,
-    player.position.y + 4.2,
-    player.position.z - 9.2
+    player.position.x * 0.3,
+    player.position.y + 4.0,
+    player.position.z - 9.5
   );
-  camera.position.lerp(cameraTarget, 3.8 * delta);
+  camera.position.lerp(cameraTarget, 4 * delta);
 
   cameraLookTarget.set(
-    player.position.x * 0.35,
-    player.position.y + 0.9,
-    player.position.z + 18
+    player.position.x * 0.4,
+    player.position.y + 0.8,
+    player.position.z + 16
   );
   camera.lookAt(cameraLookTarget);
 
-  const targetFov = 70 + Math.min(20, state.speed * 0.42);
-  camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 2.8 * delta);
+  const targetFov = 70 + Math.min(18, state.speed * 0.35);
+  camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 3 * delta);
   camera.updateProjectionMatrix();
 }
 
 function updateHud() {
-  const surfText = state.surfing ? `surfing ${state.surfSide}` : "air / flat";
-  const finishText = state.finished ? "<br>finish reached" : "";
-  hud.innerHTML = `Speed ${state.speed.toFixed(1)}<br>Best ${state.bestSpeed.toFixed(1)}<br>${surfText}${finishText}`;
+  const status = state.finished ? "finish" : state.surfing ? `surfing ${state.surfSide}` : "air / floor";
+  hud.innerHTML = `Speed ${state.speed.toFixed(1)}<br>Best ${state.bestSpeed.toFixed(1)}<br>${status}`;
 
   trail.visible = state.speed > 8;
   trail.position.copy(player.position);
-  trail.position.z -= 1.8;
-  trail.position.y += 0.15;
-  trail.scale.setScalar(THREE.MathUtils.clamp(state.speed / 16, 0.8, 2.8));
-  trail.material.opacity = THREE.MathUtils.clamp((state.speed - 8) / 24, 0.12, 0.46);
+  trail.position.z -= 1.6;
+  trail.position.y += 0.12;
+  trail.scale.setScalar(THREE.MathUtils.clamp(state.speed / 15, 0.8, 2.6));
+  trail.material.opacity = THREE.MathUtils.clamp((state.speed - 8) / 18, 0.12, 0.42);
 }
 
 window.addEventListener("resize", () => {
