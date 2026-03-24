@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/PESSIAS/game-project-x#readme",
   "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.19.1",
     "three": "^0.183.2",
     "vite": "^8.0.2"
   },
