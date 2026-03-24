@@ -2,7 +2,7 @@ import * as THREE from "three";
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x120a1f);
-scene.fog = new THREE.Fog(0x120a1f, 40, 180);
+scene.fog = new THREE.Fog(0x120a1f, 50, 190);
 
 const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -29,7 +29,7 @@ const hint = document.createElement("div");
 hint.style.position = "fixed";
 hint.style.top = "16px";
 hint.style.right = "16px";
-hint.style.maxWidth = "270px";
+hint.style.maxWidth = "290px";
 hint.style.color = "#d9cfff";
 hint.style.fontFamily = "Arial, sans-serif";
 hint.style.fontSize = "14px";
@@ -37,7 +37,7 @@ hint.style.lineHeight = "1.4";
 hint.style.textAlign = "right";
 hint.style.textShadow = "0 2px 12px rgba(0,0,0,0.45)";
 hint.style.zIndex = "10";
-hint.innerHTML = "A/D or arrows to steer.<br>On mobile, drag the joystick.<br>Drop onto the first ramp, then swap sides.";
+hint.innerHTML = "A/D or arrows to steer.<br>On mobile, drag the joystick.<br>Drop onto the ramp, then swap sides and reach the finish.";
 document.body.appendChild(hint);
 
 const joystickBase = document.createElement("div");
@@ -65,13 +65,13 @@ joystickKnob.style.background = "rgba(255,255,255,0.28)";
 joystickKnob.style.border = "1px solid rgba(255,255,255,0.35)";
 joystickBase.appendChild(joystickKnob);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.68));
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
 const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
-sunLight.position.set(10, 14, 8);
+sunLight.position.set(10, 16, 8);
 scene.add(sunLight);
 
-const fillLight = new THREE.PointLight(0x8844ff, 18, 80);
-fillLight.position.set(0, 10, -8);
+const fillLight = new THREE.PointLight(0x8844ff, 18, 90);
+fillLight.position.set(0, 12, -8);
 scene.add(fillLight);
 
 const world = new THREE.Group();
@@ -101,15 +101,16 @@ const leftRampMaterial = new THREE.MeshStandardMaterial({ color: 0x35d0ff, emiss
 const rightRampMaterial = new THREE.MeshStandardMaterial({ color: 0xff58d2, emissive: 0x321126, roughness: 0.55 });
 const markerMaterial = new THREE.MeshStandardMaterial({ color: 0x9578e7, emissive: 0x241637, roughness: 0.6 });
 
-const floorSegments = [];
-const ramps = [];
 const laneHalfWidth = 8;
-const finishZ = 96;
-const resetPoint = new THREE.Vector3(-2.6, 6.2, -24);
-const gravity = new THREE.Vector3(0, -26, 0);
+const finishZ = 98;
+const resetPoint = new THREE.Vector3(-2.5, 6.0, -25);
+const gravity = new THREE.Vector3(0, -24, 0);
 const cameraTarget = new THREE.Vector3();
 const cameraLookTarget = new THREE.Vector3();
 const clamp = THREE.MathUtils.clamp;
+
+const floors = [];
+const ramps = [];
 
 function addBox(width, height, depth, x, y, z, material) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material);
@@ -119,7 +120,7 @@ function addBox(width, height, depth, x, y, z, material) {
 
 function addFloor(width, depth, x, y, z) {
   addBox(width, 0.8, depth, x, y - 0.4, z, floorMaterial);
-  floorSegments.push({
+  floors.push({
     xMin: x - width / 2,
     xMax: x + width / 2,
     zMin: z - depth / 2,
@@ -144,9 +145,7 @@ function addRamp({ side, z, width, length, topY, bottomY }) {
   geometry.rotateY(Math.PI);
 
   const isLeft = side === "left";
-  const material = isLeft ? leftRampMaterial : rightRampMaterial;
-  const mesh = new THREE.Mesh(geometry, material);
-
+  const mesh = new THREE.Mesh(geometry, isLeft ? leftRampMaterial : rightRampMaterial);
   if (isLeft) {
     mesh.scale.x = -1;
     mesh.position.set(0, bottomY, z - length / 2);
@@ -157,24 +156,22 @@ function addRamp({ side, z, width, length, topY, bottomY }) {
 
   ramps.push({
     side,
+    width,
     zMin: z - length / 2,
     zMax: z + length / 2,
     xMin: isLeft ? -width : 0,
     xMax: isLeft ? 0 : width,
     topY,
     bottomY,
-    width,
     targetDir: isLeft ? -1 : 1,
   });
 }
 
 addFloor(12, 12, 0, 4.8, -24);
-addRamp({ side: "left", z: 4, width: 8, length: 26, topY: 1.2, bottomY: -1.6 });
-addFloor(10, 10, 0, -1.6, 24);
-addRamp({ side: "right", z: 44, width: 8, length: 22, topY: 0.8, bottomY: -1.2 });
-addFloor(10, 10, 0, -1.2, 64);
-addRamp({ side: "left", z: 82, width: 8.4, length: 20, topY: 1.4, bottomY: -0.8 });
-addFloor(14, 12, 0, -0.8, finishZ);
+addRamp({ side: "left", z: 6, width: 8, length: 26, topY: 1.6, bottomY: -1.2 });
+addFloor(12, 10, 0, -1.2, 28);
+addRamp({ side: "right", z: 50, width: 8, length: 22, topY: 1.2, bottomY: -0.8 });
+addFloor(14, 10, 0, -0.8, finishZ);
 
 for (let z = -20; z <= finishZ; z += 10) {
   addGuide(-laneHalfWidth, 0, z);
@@ -242,7 +239,7 @@ const state = {
 
 function resetPlayer() {
   player.position.copy(resetPoint);
-  state.velocity.set(0.8, -2.4, 7.6);
+  state.velocity.set(0.9, -2.4, 7.2);
   state.speed = state.velocity.length();
   state.surfing = false;
   state.surfSide = "none";
@@ -258,7 +255,7 @@ function getControlX() {
 
 function getFloorHeight(position) {
   let best = -Infinity;
-  for (const floor of floorSegments) {
+  for (const floor of floors) {
     if (position.x >= floor.xMin && position.x <= floor.xMax && position.z >= floor.zMin && position.z <= floor.zMax) {
       best = Math.max(best, floor.y + playerRadius);
     }
@@ -266,17 +263,23 @@ function getFloorHeight(position) {
   return best;
 }
 
-function getRampContact(position) {
+function getRampSurface(ramp, x) {
+  const t = clamp((x - ramp.xMin) / (ramp.xMax - ramp.xMin), 0, 1);
+  return ramp.side === "left"
+    ? THREE.MathUtils.lerp(ramp.bottomY, ramp.topY, 1 - t)
+    : THREE.MathUtils.lerp(ramp.bottomY, ramp.topY, t);
+}
+
+function getRampContact(position, nextY) {
   for (const ramp of ramps) {
     if (position.z < ramp.zMin || position.z > ramp.zMax) continue;
     if (position.x < ramp.xMin - playerRadius || position.x > ramp.xMax + playerRadius) continue;
 
-    const t = clamp((position.x - ramp.xMin) / (ramp.xMax - ramp.xMin), 0, 1);
-    const surfaceY = ramp.side === "left"
-      ? THREE.MathUtils.lerp(ramp.bottomY, ramp.topY, 1 - t)
-      : THREE.MathUtils.lerp(ramp.bottomY, ramp.topY, t);
+    const surfaceY = getRampSurface(ramp, position.x);
+    const topOfBall = nextY + playerRadius;
+    const bottomOfBall = nextY - playerRadius;
 
-    if (position.y <= surfaceY + playerRadius + 0.18 && position.y >= surfaceY - 1.2) {
+    if (bottomOfBall <= surfaceY + 0.2 && topOfBall >= surfaceY - 0.2) {
       return { ramp, surfaceY };
     }
   }
@@ -287,32 +290,32 @@ function updatePlayer(delta) {
   const controlX = getControlX();
 
   state.velocity.addScaledVector(gravity, delta);
-  state.velocity.x += controlX * 16 * delta;
-  state.velocity.z += 4.5 * delta;
+  state.velocity.x += controlX * 15 * delta;
+  state.velocity.z += 4.2 * delta;
 
-  const nextPosition = player.position.clone().addScaledVector(state.velocity, delta);
-  const rampContact = getRampContact(nextPosition);
+  let nextX = player.position.x + state.velocity.x * delta;
+  let nextY = player.position.y + state.velocity.y * delta;
+  let nextZ = player.position.z + state.velocity.z * delta;
 
   state.surfing = false;
   state.surfSide = "none";
 
+  const rampContact = getRampContact(new THREE.Vector3(nextX, nextY, nextZ), nextY);
   if (rampContact) {
     const { ramp, surfaceY } = rampContact;
-    nextPosition.y = surfaceY + playerRadius;
-
-    if (state.velocity.y < -1) state.velocity.y = -1;
+    nextY = surfaceY + playerRadius;
 
     const alignment = clamp(controlX * ramp.targetDir, 0, 1);
-    state.velocity.z += (8 + alignment * 8) * delta;
-    state.velocity.x += ramp.targetDir * (9 + alignment * 16) * delta;
-    state.velocity.y -= 1.8 * delta;
+    state.velocity.y = Math.min(state.velocity.y, -0.8);
+    state.velocity.z += (7 + alignment * 8) * delta;
+    state.velocity.x += ramp.targetDir * (8 + alignment * 12) * delta;
 
     state.surfing = true;
     state.surfSide = ramp.side;
   } else {
-    const floorHeight = getFloorHeight(nextPosition);
-    if (floorHeight > -Infinity && nextPosition.y <= floorHeight) {
-      nextPosition.y = floorHeight;
+    const floorHeight = getFloorHeight(new THREE.Vector3(nextX, nextY, nextZ));
+    if (floorHeight > -Infinity && nextY <= floorHeight) {
+      nextY = floorHeight;
       if (state.velocity.y < 0) state.velocity.y = 0;
       state.velocity.x *= 0.985;
       state.velocity.z *= 0.995;
@@ -320,14 +323,14 @@ function updatePlayer(delta) {
   }
 
   const planarSpeed = Math.hypot(state.velocity.x, state.velocity.z);
-  const maxPlanar = state.surfing ? 28 : 20;
+  const maxPlanar = state.surfing ? 26 : 20;
   if (planarSpeed > maxPlanar) {
     const scale = maxPlanar / planarSpeed;
     state.velocity.x *= scale;
     state.velocity.z *= scale;
   }
 
-  player.position.copy(nextPosition);
+  player.position.set(nextX, nextY, nextZ);
   state.speed = state.velocity.length();
   state.bestSpeed = Math.max(state.bestSpeed, state.speed);
 
@@ -337,7 +340,7 @@ function updatePlayer(delta) {
     player.rotateOnWorldAxis(rollAxis, -(planar.length() * delta) / playerRadius);
   }
 
-  if (Math.abs(player.position.x) > laneHalfWidth + 3 || player.position.y < -10) {
+  if (Math.abs(player.position.x) > laneHalfWidth + 3 || player.position.y < -8) {
     resetPlayer();
   }
 
@@ -350,8 +353,8 @@ function updatePlayer(delta) {
 function updateCamera(delta) {
   cameraTarget.set(
     player.position.x * 0.22,
-    player.position.y + 4.6,
-    player.position.z - 10.5
+    player.position.y + 4.8,
+    player.position.z - 10.8
   );
   camera.position.lerp(cameraTarget, 4 * delta);
 
