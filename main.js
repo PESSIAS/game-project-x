@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import RAPIER from "@dimforge/rapier3d-compat";
 
-await RAPIER.init();
+const rapierModule = await RAPIER.init();
+const RapierLib = rapierModule || RAPIER;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x120a1f);
@@ -80,7 +81,7 @@ scene.add(fillLight);
 const worldVisuals = new THREE.Group();
 scene.add(worldVisuals);
 
-const physicsWorld = new RAPIER.World({ x: 0, y: -18, z: 0 });
+const physicsWorld = new RapierLib.World({ x: 0, y: -18, z: 0 });
 
 const playerRadius = 0.6;
 const finishZ = 96;
@@ -116,8 +117,8 @@ function addRigidBox(width, height, depth, x, y, z, material) {
   mesh.position.set(x, y, z);
   worldVisuals.add(mesh);
 
-  const body = physicsWorld.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(x, y, z));
-  const collider = RAPIER.ColliderDesc.cuboid(width / 2, height / 2, depth / 2);
+  const body = physicsWorld.createRigidBody(RapierLib.RigidBodyDesc.fixed().setTranslation(x, y, z));
+  const collider = RapierLib.ColliderDesc.cuboid(width / 2, height / 2, depth / 2);
   physicsWorld.createCollider(collider, body);
 }
 
@@ -148,7 +149,7 @@ function addRamp(side, z, width, length, topY, bottomY) {
   }
   worldVisuals.add(mesh);
 
-  const body = physicsWorld.createRigidBody(RAPIER.RigidBodyDesc.fixed());
+  const body = physicsWorld.createRigidBody(RapierLib.RigidBodyDesc.fixed());
   const halfWidth = width / 2;
   const halfHeight = height / 2;
   const halfLength = length / 2;
@@ -164,7 +165,7 @@ function addRamp(side, z, width, length, topY, bottomY) {
     : new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -angle));
   body.setRotation({ x: rotation.x, y: rotation.y, z: rotation.z, w: rotation.w }, true);
 
-  const collider = RAPIER.ColliderDesc.cuboid(slopeLength / 2, 0.25, halfLength)
+  const collider = RapierLib.ColliderDesc.cuboid(slopeLength / 2, 0.25, halfLength)
     .setRestitution(0)
     .setFriction(0.2);
   physicsWorld.createCollider(collider, body);
@@ -182,14 +183,14 @@ for (let z = -20; z <= finishZ; z += 10) {
 }
 
 const playerBody = physicsWorld.createRigidBody(
-  RAPIER.RigidBodyDesc.dynamic()
+  RapierLib.RigidBodyDesc.dynamic()
     .setTranslation(resetPosition.x, resetPosition.y, resetPosition.z)
     .setLinearDamping(0.15)
     .setAngularDamping(0.6)
     .setCanSleep(false)
 );
 physicsWorld.createCollider(
-  RAPIER.ColliderDesc.ball(playerRadius)
+  RapierLib.ColliderDesc.ball(playerRadius)
     .setRestitution(0)
     .setFriction(0.3),
   playerBody
