@@ -105,7 +105,7 @@ const floorSegments = [];
 const ramps = [];
 const laneHalfWidth = 8;
 const finishZ = 108;
-const resetPoint = new THREE.Vector3(-2.6, 5.4, -22);
+const resetPoint = new THREE.Vector3(-2.8, 6.8, -24);
 const gravity = new THREE.Vector3(0, -30, 0);
 const cameraTarget = new THREE.Vector3();
 const cameraLookTarget = new THREE.Vector3();
@@ -176,11 +176,11 @@ function addRamp({ side, z, width, length, topY, bottomY }) {
   });
 }
 
-addFloor(12, 12, 0, 4.0, -22);
-addRamp({ side: "left", z: -2, width: 8, length: 28, topY: 1.0, bottomY: -2.4 });
-addFloor(12, 12, 0, -2.4, 18);
-addRamp({ side: "right", z: 38, width: 8, length: 24, topY: 2.4, bottomY: -1.0 });
-addFloor(12, 10, 0, -1.0, 58 });
+addFloor(12, 12, 0, 5.2, -24);
+addRamp({ side: "left", z: 6, width: 8, length: 24, topY: 0.8, bottomY: -2.8 });
+addFloor(12, 12, 0, -2.8, 28);
+addRamp({ side: "right", z: 52, width: 8, length: 24, topY: 1.8, bottomY: -1.0 });
+addFloor(12, 10, 0, -1.0, 74);
 addRamp({ side: "left", z: 76, width: 8.5, length: 24, topY: 3.0, bottomY: -0.6 });
 addFloor(16, 12, 0, -0.6, finishZ);
 
@@ -250,7 +250,7 @@ const state = {
 
 function resetPlayer() {
   player.position.copy(resetPoint);
-  state.velocity.set(1.2, -2.2, 8.4);
+  state.velocity.set(1.0, -3.4, 7.6);
   state.speed = state.velocity.length();
   state.bestSpeed = Math.max(state.bestSpeed, state.speed);
   state.surfing = false;
@@ -360,16 +360,16 @@ function updatePlayer(delta) {
 
 function updateCamera(delta) {
   cameraTarget.set(
-    player.position.x * 0.3,
-    player.position.y + 4.0,
-    player.position.z - 9.5
+    player.position.x * 0.24,
+    player.position.y + 4.8,
+    player.position.z - 10.5
   );
   camera.position.lerp(cameraTarget, 4 * delta);
 
   cameraLookTarget.set(
-    player.position.x * 0.4,
-    player.position.y + 0.8,
-    player.position.z + 16
+    player.position.x * 0.28,
+    player.position.y + 0.4,
+    player.position.z + 18
   );
   camera.lookAt(cameraLookTarget);
 
