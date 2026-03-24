@@ -37,7 +37,7 @@ hint.style.lineHeight = "1.4";
 hint.style.textAlign = "right";
 hint.style.textShadow = "0 2px 12px rgba(0,0,0,0.45)";
 hint.style.zIndex = "10";
-hint.innerHTML = "A/D or arrows to steer.<br>On mobile, drag the joystick.<br>Land on angled ramps and swap sides.";
+hint.innerHTML = "A/D or arrows to steer.<br>On mobile, drag the joystick.<br>Drop onto the first ramp, then swap sides.";
 document.body.appendChild(hint);
 
 const joystickBase = document.createElement("div");
@@ -104,18 +104,17 @@ const markerMaterial = new THREE.MeshStandardMaterial({ color: 0x9578e7, emissiv
 const floorSegments = [];
 const ramps = [];
 const laneHalfWidth = 8;
-const finishZ = 108;
-const resetPoint = new THREE.Vector3(-2.8, 6.8, -24);
-const gravity = new THREE.Vector3(0, -30, 0);
+const finishZ = 96;
+const resetPoint = new THREE.Vector3(-2.6, 6.2, -24);
+const gravity = new THREE.Vector3(0, -26, 0);
 const cameraTarget = new THREE.Vector3();
 const cameraLookTarget = new THREE.Vector3();
-const tmpVec = new THREE.Vector3();
+const clamp = THREE.MathUtils.clamp;
 
 function addBox(width, height, depth, x, y, z, material) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material);
   mesh.position.set(x, y, z);
   world.add(mesh);
-  return mesh;
 }
 
 function addFloor(width, depth, x, y, z) {
@@ -144,11 +143,11 @@ function addRamp({ side, z, width, length, topY, bottomY }) {
   const geometry = new THREE.ExtrudeGeometry(shape, { depth: length, bevelEnabled: false });
   geometry.rotateY(Math.PI);
 
-  const left = side === "left";
-  const material = left ? leftRampMaterial : rightRampMaterial;
+  const isLeft = side === "left";
+  const material = isLeft ? leftRampMaterial : rightRampMaterial;
   const mesh = new THREE.Mesh(geometry, material);
 
-  if (left) {
+  if (isLeft) {
     mesh.scale.x = -1;
     mesh.position.set(0, bottomY, z - length / 2);
   } else {
@@ -156,33 +155,26 @@ function addRamp({ side, z, width, length, topY, bottomY }) {
   }
   world.add(mesh);
 
-  const normal = left
-    ? new THREE.Vector3(-height, width, 0).normalize()
-    : new THREE.Vector3(height, width, 0).normalize();
-
-  const planePoint = new THREE.Vector3(left ? -width / 2 : width / 2, bottomY + height / 2, z);
-
   ramps.push({
     side,
-    width,
     zMin: z - length / 2,
     zMax: z + length / 2,
-    xMin: left ? -width : 0,
-    xMax: left ? 0 : width,
-    plane: new THREE.Plane().setFromNormalAndCoplanarPoint(normal, planePoint),
-    normal,
-    downhill: new THREE.Vector3(0, -1, 0).projectOnPlane(normal).normalize(),
-    targetDir: left ? -1 : 1,
+    xMin: isLeft ? -width : 0,
+    xMax: isLeft ? 0 : width,
+    topY,
+    bottomY,
+    width,
+    targetDir: isLeft ? -1 : 1,
   });
 }
 
-addFloor(12, 12, 0, 5.2, -24);
-addRamp({ side: "left", z: 6, width: 8, length: 24, topY: 0.8, bottomY: -2.8 });
-addFloor(12, 12, 0, -2.8, 28);
-addRamp({ side: "right", z: 52, width: 8, length: 24, topY: 1.8, bottomY: -1.0 });
-addFloor(12, 10, 0, -1.0, 74);
-addRamp({ side: "left", z: 76, width: 8.5, length: 24, topY: 3.0, bottomY: -0.6 });
-addFloor(16, 12, 0, -0.6, finishZ);
+addFloor(12, 12, 0, 4.8, -24);
+addRamp({ side: "left", z: 4, width: 8, length: 26, topY: 1.2, bottomY: -1.6 });
+addFloor(10, 10, 0, -1.6, 24);
+addRamp({ side: "right", z: 44, width: 8, length: 22, topY: 0.8, bottomY: -1.2 });
+addFloor(10, 10, 0, -1.2, 64);
+addRamp({ side: "left", z: 82, width: 8.4, length: 20, topY: 1.4, bottomY: -0.8 });
+addFloor(14, 12, 0, -0.8, finishZ);
 
 for (let z = -20; z <= finishZ; z += 10) {
   addGuide(-laneHalfWidth, 0, z);
@@ -240,7 +232,7 @@ joystickBase.addEventListener("pointerup", releaseJoystick);
 joystickBase.addEventListener("pointercancel", releaseJoystick);
 
 const state = {
-  velocity: new THREE.Vector3(0, 0, 0),
+  velocity: new THREE.Vector3(),
   speed: 0,
   bestSpeed: 0,
   surfing: false,
@@ -250,9 +242,8 @@ const state = {
 
 function resetPlayer() {
   player.position.copy(resetPoint);
-  state.velocity.set(1.0, -3.4, 7.6);
+  state.velocity.set(0.8, -2.4, 7.6);
   state.speed = state.velocity.length();
-  state.bestSpeed = Math.max(state.bestSpeed, state.speed);
   state.surfing = false;
   state.surfSide = "none";
   state.finished = false;
@@ -280,12 +271,13 @@ function getRampContact(position) {
     if (position.z < ramp.zMin || position.z > ramp.zMax) continue;
     if (position.x < ramp.xMin - playerRadius || position.x > ramp.xMax + playerRadius) continue;
 
-    const distance = ramp.plane.distanceToPoint(position);
-    if (distance >= -0.3 && distance <= playerRadius + 0.22) {
-      const projected = tmpVec.copy(position).addScaledVector(ramp.normal, -distance);
-      if (projected.x >= ramp.xMin - 0.12 && projected.x <= ramp.xMax + 0.12) {
-        return { ramp, distance };
-      }
+    const t = clamp((position.x - ramp.xMin) / (ramp.xMax - ramp.xMin), 0, 1);
+    const surfaceY = ramp.side === "left"
+      ? THREE.MathUtils.lerp(ramp.bottomY, ramp.topY, 1 - t)
+      : THREE.MathUtils.lerp(ramp.bottomY, ramp.topY, t);
+
+    if (position.y <= surfaceY + playerRadius + 0.18 && position.y >= surfaceY - 1.2) {
+      return { ramp, surfaceY };
     }
   }
   return null;
@@ -295,8 +287,8 @@ function updatePlayer(delta) {
   const controlX = getControlX();
 
   state.velocity.addScaledVector(gravity, delta);
-  state.velocity.x += controlX * 18 * delta;
-  state.velocity.z += 5.5 * delta;
+  state.velocity.x += controlX * 16 * delta;
+  state.velocity.z += 4.5 * delta;
 
   const nextPosition = player.position.clone().addScaledVector(state.velocity, delta);
   const rampContact = getRampContact(nextPosition);
@@ -305,18 +297,15 @@ function updatePlayer(delta) {
   state.surfSide = "none";
 
   if (rampContact) {
-    const { ramp, distance } = rampContact;
-    nextPosition.addScaledVector(ramp.normal, playerRadius - distance + 0.02);
+    const { ramp, surfaceY } = rampContact;
+    nextPosition.y = surfaceY + playerRadius;
 
-    const intoRamp = ramp.normal.dot(state.velocity);
-    if (intoRamp < 0) {
-      state.velocity.addScaledVector(ramp.normal, -intoRamp);
-    }
+    if (state.velocity.y < -1) state.velocity.y = -1;
 
-    const alignment = THREE.MathUtils.clamp(controlX * ramp.targetDir, 0, 1);
-    state.velocity.addScaledVector(ramp.downhill, (20 + alignment * 18) * delta);
-    state.velocity.x += ramp.targetDir * (8 + alignment * 14) * delta;
-    state.velocity.z += (7 + alignment * 7) * delta;
+    const alignment = clamp(controlX * ramp.targetDir, 0, 1);
+    state.velocity.z += (8 + alignment * 8) * delta;
+    state.velocity.x += ramp.targetDir * (9 + alignment * 16) * delta;
+    state.velocity.y -= 1.8 * delta;
 
     state.surfing = true;
     state.surfSide = ramp.side;
@@ -331,7 +320,7 @@ function updatePlayer(delta) {
   }
 
   const planarSpeed = Math.hypot(state.velocity.x, state.velocity.z);
-  const maxPlanar = state.surfing ? 34 : 22;
+  const maxPlanar = state.surfing ? 28 : 20;
   if (planarSpeed > maxPlanar) {
     const scale = maxPlanar / planarSpeed;
     state.velocity.x *= scale;
@@ -348,11 +337,11 @@ function updatePlayer(delta) {
     player.rotateOnWorldAxis(rollAxis, -(planar.length() * delta) / playerRadius);
   }
 
-  if (Math.abs(player.position.x) > laneHalfWidth + 3 || player.position.y < -12) {
+  if (Math.abs(player.position.x) > laneHalfWidth + 3 || player.position.y < -10) {
     resetPlayer();
   }
 
-  if (player.position.z > finishZ + 8) {
+  if (player.position.z > finishZ + 6) {
     state.finished = true;
     state.velocity.multiplyScalar(0.99);
   }
@@ -360,8 +349,8 @@ function updatePlayer(delta) {
 
 function updateCamera(delta) {
   cameraTarget.set(
-    player.position.x * 0.24,
-    player.position.y + 4.8,
+    player.position.x * 0.22,
+    player.position.y + 4.6,
     player.position.z - 10.5
   );
   camera.position.lerp(cameraTarget, 4 * delta);
@@ -373,7 +362,7 @@ function updateCamera(delta) {
   );
   camera.lookAt(cameraLookTarget);
 
-  const targetFov = 70 + Math.min(18, state.speed * 0.35);
+  const targetFov = 70 + Math.min(16, state.speed * 0.32);
   camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 3 * delta);
   camera.updateProjectionMatrix();
 }
@@ -382,12 +371,12 @@ function updateHud() {
   const status = state.finished ? "finish" : state.surfing ? `surfing ${state.surfSide}` : "air / floor";
   hud.innerHTML = `Speed ${state.speed.toFixed(1)}<br>Best ${state.bestSpeed.toFixed(1)}<br>${status}`;
 
-  trail.visible = state.speed > 8;
+  trail.visible = state.speed > 7;
   trail.position.copy(player.position);
   trail.position.z -= 1.6;
   trail.position.y += 0.12;
-  trail.scale.setScalar(THREE.MathUtils.clamp(state.speed / 15, 0.8, 2.6));
-  trail.material.opacity = THREE.MathUtils.clamp((state.speed - 8) / 18, 0.12, 0.42);
+  trail.scale.setScalar(clamp(state.speed / 15, 0.8, 2.4));
+  trail.material.opacity = clamp((state.speed - 7) / 16, 0.12, 0.42);
 }
 
 window.addEventListener("resize", () => {
