@@ -31,7 +31,7 @@ const hint = document.createElement("div");
 hint.style.position = "fixed";
 hint.style.top = "16px";
 hint.style.right = "16px";
-hint.style.maxWidth = "260px";
+hint.style.maxWidth = "300px";
 hint.style.color = "#ffffff";
 hint.style.fontFamily = "Arial, sans-serif";
 hint.style.fontSize = "14px";
@@ -39,8 +39,24 @@ hint.style.lineHeight = "1.4";
 hint.style.textAlign = "right";
 hint.style.textShadow = "0 2px 8px rgba(0,0,0,0.35)";
 hint.style.zIndex = "10";
-hint.innerHTML = "Move with joystick or WASD.<br>Trees inside the white ring get chopped automatically.";
+hint.innerHTML = "Move with joystick or WASD.<br>Trees inside the white ring get chopped automatically.<br>Stand on the yellow pad to sell wood.";
 document.body.appendChild(hint);
+
+const upgradeButton = document.createElement("button");
+upgradeButton.textContent = "Upgrade Hit";
+upgradeButton.style.position = "fixed";
+upgradeButton.style.right = "16px";
+upgradeButton.style.bottom = "24px";
+upgradeButton.style.padding = "12px 16px";
+upgradeButton.style.border = "none";
+upgradeButton.style.borderRadius = "12px";
+upgradeButton.style.background = "#2d6cdf";
+upgradeButton.style.color = "white";
+upgradeButton.style.fontSize = "16px";
+upgradeButton.style.fontWeight = "bold";
+upgradeButton.style.boxShadow = "0 4px 12px rgba(0,0,0,0.25)";
+upgradeButton.style.zIndex = "20";
+document.body.appendChild(upgradeButton);
 
 const joystickBase = document.createElement("div");
 joystickBase.style.position = "fixed";
@@ -78,6 +94,20 @@ const ground = new THREE.Mesh(
 );
 ground.rotation.x = -Math.PI / 2;
 scene.add(ground);
+
+const sellPad = new THREE.Mesh(
+  new THREE.CylinderGeometry(1.5, 1.5, 0.2, 24),
+  new THREE.MeshStandardMaterial({ color: 0xf3cf59, roughness: 0.9 })
+);
+sellPad.position.set(-9, 0.1, 8);
+scene.add(sellPad);
+
+const sellLabel = new THREE.Mesh(
+  new THREE.BoxGeometry(1.8, 0.1, 1.2),
+  new THREE.MeshStandardMaterial({ color: 0xffef9a, roughness: 1 })
+);
+sellLabel.position.set(-9, 0.22, 8);
+scene.add(sellLabel);
 
 const playerGroup = new THREE.Group();
 scene.add(playerGroup);
@@ -121,8 +151,12 @@ playerGroup.add(chopRange);
 const trees = [];
 const logs = [];
 let woodCount = 0;
+let coins = 0;
+let hitPower = 1;
+let upgradeCost = 5;
 let chopTimer = 0;
 let chopping = false;
+let selling = false;
 
 function createTree(x, z) {
   const tree = new THREE.Group();
@@ -164,6 +198,8 @@ createTree(4, -3);
 createTree(7, 6);
 createTree(0, -8);
 createTree(8, 0);
+createTree(6, 9);
+createTree(-8, 1);
 
 const keyboard = { up: false, down: false, left: false, right: false };
 const input = { x: 0, y: 0 };
@@ -226,6 +262,14 @@ const player = {
   chopRange: 2,
 };
 
+upgradeButton.addEventListener("click", () => {
+  if (coins >= upgradeCost) {
+    coins -= upgradeCost;
+    hitPower += 1;
+    upgradeCost += 5;
+  }
+});
+
 function getMoveInput() {
   const x = Math.abs(input.x) > 0.01 ? input.x : (keyboard.right ? 1 : 0) - (keyboard.left ? 1 : 0);
   const y = Math.abs(input.y) > 0.01 ? input.y : (keyboard.down ? 1 : 0) - (keyboard.up ? 1 : 0);
@@ -254,6 +298,20 @@ function updatePlayer(delta) {
   }
 }
 
+function updateSelling() {
+  const dx = player.position.x - sellPad.position.x;
+  const dz = player.position.z - sellPad.position.z;
+  const distance = Math.hypot(dx, dz);
+  selling = distance < 1.7;
+
+  sellPad.material.emissive = new THREE.Color(selling ? 0x554400 : 0x000000);
+
+  if (selling && woodCount > 0) {
+    coins += woodCount;
+    woodCount = 0;
+  }
+}
+
 function updateChopping(delta) {
   let closestTree = null;
   let closestDistance = Infinity;
@@ -279,15 +337,14 @@ function updateChopping(delta) {
 
     if (chopTimer >= 0.45) {
       chopTimer = 0;
-      closestTree.health -= 1;
-      closestTree.mesh.scale.setScalar(0.96);
+      closestTree.health -= hitPower;
+      closestTree.mesh.scale.setScalar(Math.max(0.75, closestTree.health / closestTree.maxHealth));
 
       if (closestTree.health <= 0) {
         scene.remove(closestTree.mesh);
         const index = trees.indexOf(closestTree);
         if (index >= 0) trees.splice(index, 1);
         spawnLog(closestTree.x + (Math.random() - 0.5) * 0.6, closestTree.z + (Math.random() - 0.5) * 0.6);
-        woodCount += 1;
       }
     }
   } else {
@@ -314,7 +371,8 @@ function updateLogs(delta) {
 }
 
 function updateHud() {
-  hud.innerHTML = `Wood ${woodCount}<br>Trees ${trees.length}<br>${chopping ? "Chopping" : "Move near a tree"}`;
+  hud.innerHTML = `Wood ${woodCount}<br>Coins ${coins}<br>Hit Power ${hitPower}<br>${chopping ? "Chopping" : selling ? "Selling" : "Move near a tree"}`;
+  upgradeButton.textContent = `Upgrade Hit (${upgradeCost})`;
 }
 
 window.addEventListener("resize", () => {
@@ -330,6 +388,7 @@ function animate() {
   const delta = Math.min(clock.getDelta(), 0.033);
 
   updatePlayer(delta);
+  updateSelling();
   updateChopping(delta);
   updateLogs(delta);
   updateHud();
