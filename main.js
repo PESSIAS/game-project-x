@@ -5,7 +5,8 @@ scene.background = new THREE.Color(0x87c77b);
 scene.fog = new THREE.Fog(0x87c77b, 18, 36);
 
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(0, 14, 10);
+const cameraOffset = new THREE.Vector3(0, 14, 10);
+camera.position.copy(cameraOffset);
 camera.lookAt(0, 0, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -375,6 +376,12 @@ function updateHud() {
   upgradeButton.textContent = `Upgrade Hit (${upgradeCost})`;
 }
 
+function updateCamera(delta) {
+  const targetPosition = player.position.clone().add(cameraOffset);
+  camera.position.lerp(targetPosition, 4 * delta);
+  camera.lookAt(player.position.x, 0, player.position.z);
+}
+
 window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
@@ -392,6 +399,7 @@ function animate() {
   updateChopping(delta);
   updateLogs(delta);
   updateHud();
+  updateCamera(delta);
 
   renderer.render(scene, camera);
 }
