@@ -4,15 +4,8 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87c77b);
 scene.fog = new THREE.Fog(0x87c77b, 18, 36);
 
-const camera = new THREE.OrthographicCamera(
-  window.innerWidth / -90,
-  window.innerWidth / 90,
-  window.innerHeight / 90,
-  window.innerHeight / -90,
-  0.1,
-  100
-);
-camera.position.set(0, 18, 0);
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(0, 14, 10);
 camera.lookAt(0, 0, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -325,10 +318,7 @@ function updateHud() {
 }
 
 window.addEventListener("resize", () => {
-  camera.left = window.innerWidth / -90;
-  camera.right = window.innerWidth / 90;
-  camera.top = window.innerHeight / 90;
-  camera.bottom = window.innerHeight / -90;
+  camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
