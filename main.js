@@ -110,36 +110,71 @@ const sellLabel = new THREE.Mesh(
 sellLabel.position.set(-9, 0.22, 8);
 scene.add(sellLabel);
 
+const playerRoot = new THREE.Group();
+scene.add(playerRoot);
+
 const playerGroup = new THREE.Group();
-scene.add(playerGroup);
+playerRoot.add(playerGroup);
 
-const body = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.45, 0.55, 1.1, 16),
-  new THREE.MeshStandardMaterial({ color: 0x4a7bd1, roughness: 0.8 })
-);
-body.position.y = 0.55;
-playerGroup.add(body);
+const skinMaterial = new THREE.MeshStandardMaterial({ color: 0xf2d7c7, roughness: 0.95 });
+const shirtMaterial = new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.9 });
+const pantsMaterial = new THREE.MeshStandardMaterial({ color: 0x8f8f8f, roughness: 0.9 });
+const shoeMaterial = new THREE.MeshStandardMaterial({ color: 0x5b4a3d, roughness: 1 });
+const woodMaterial = new THREE.MeshStandardMaterial({ color: 0x7b4b2a, roughness: 0.8 });
+const metalMaterial = new THREE.MeshStandardMaterial({ color: 0xd8dde5, roughness: 0.35, metalness: 0.6 });
 
-const head = new THREE.Mesh(
-  new THREE.SphereGeometry(0.32, 16, 16),
-  new THREE.MeshStandardMaterial({ color: 0xf0d0b0, roughness: 0.9 })
-);
-head.position.y = 1.3;
+const torso = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.1, 0.5), shirtMaterial);
+torso.position.y = 1.2;
+playerGroup.add(torso);
+
+const hips = new THREE.Group();
+hips.position.y = 0.65;
+playerGroup.add(hips);
+
+const head = new THREE.Mesh(new THREE.SphereGeometry(0.34, 16, 16), skinMaterial);
+head.position.y = 2.0;
 playerGroup.add(head);
 
-const axe = new THREE.Mesh(
-  new THREE.BoxGeometry(0.08, 0.7, 0.08),
-  new THREE.MeshStandardMaterial({ color: 0x7b4b2a, roughness: 0.8 })
-);
-axe.position.set(0.42, 0.65, 0);
-playerGroup.add(axe);
+const leftArmPivot = new THREE.Group();
+leftArmPivot.position.set(-0.55, 1.55, 0);
+playerGroup.add(leftArmPivot);
+const leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.8, 0.22), shirtMaterial);
+leftArm.position.y = -0.4;
+leftArmPivot.add(leftArm);
 
-const axeHead = new THREE.Mesh(
-  new THREE.BoxGeometry(0.22, 0.16, 0.08),
-  new THREE.MeshStandardMaterial({ color: 0xd8dde5, roughness: 0.35, metalness: 0.6 })
-);
-axeHead.position.set(0.32, 0.95, 0);
-playerGroup.add(axeHead);
+const rightArmPivot = new THREE.Group();
+rightArmPivot.position.set(0.55, 1.55, 0);
+playerGroup.add(rightArmPivot);
+const rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.8, 0.22), shirtMaterial);
+rightArm.position.y = -0.4;
+rightArmPivot.add(rightArm);
+
+const leftLegPivot = new THREE.Group();
+leftLegPivot.position.set(-0.22, 0.65, 0);
+hips.add(leftLegPivot);
+const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.9, 0.24), pantsMaterial);
+leftLeg.position.y = -0.45;
+leftLegPivot.add(leftLeg);
+const leftFoot = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.12, 0.4), shoeMaterial);
+leftFoot.position.set(0, -0.92, 0.08);
+leftLegPivot.add(leftFoot);
+
+const rightLegPivot = new THREE.Group();
+rightLegPivot.position.set(0.22, 0.65, 0);
+hips.add(rightLegPivot);
+const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.9, 0.24), pantsMaterial);
+rightLeg.position.y = -0.45;
+rightLegPivot.add(rightLeg);
+const rightFoot = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.12, 0.4), shoeMaterial);
+rightFoot.position.set(0, -0.92, 0.08);
+rightLegPivot.add(rightFoot);
+
+const axeHandle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.7, 0.08), woodMaterial);
+axeHandle.position.set(0, -0.45, 0);
+rightArmPivot.add(axeHandle);
+const axeHead = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.08), metalMaterial);
+axeHead.position.set(-0.08, -0.12, 0);
+axeHandle.add(axeHead);
 
 const chopRange = new THREE.Mesh(
   new THREE.RingGeometry(1.9, 2.05, 48),
@@ -147,7 +182,11 @@ const chopRange = new THREE.Mesh(
 );
 chopRange.rotation.x = -Math.PI / 2;
 chopRange.position.y = 0.02;
-playerGroup.add(chopRange);
+playerRoot.add(chopRange);
+
+const treeTrunkMaterial = new THREE.MeshStandardMaterial({ color: 0x7a4b25, roughness: 1 });
+const treeLeafMaterial = new THREE.MeshStandardMaterial({ color: 0x2f8f3a, roughness: 1 });
+const logMaterial = new THREE.MeshStandardMaterial({ color: 0x9a6232, roughness: 1 });
 
 const trees = [];
 const logs = [];
@@ -158,21 +197,17 @@ let upgradeCost = 5;
 let chopTimer = 0;
 let chopping = false;
 let selling = false;
+let animationTime = 0;
+let isMoving = false;
 
 function createTree(x, z) {
   const tree = new THREE.Group();
 
-  const trunk = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.22, 0.3, 1.4, 10),
-    new THREE.MeshStandardMaterial({ color: 0x7a4b25, roughness: 1 })
-  );
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.3, 1.4, 10), treeTrunkMaterial);
   trunk.position.y = 0.7;
   tree.add(trunk);
 
-  const crown = new THREE.Mesh(
-    new THREE.SphereGeometry(0.9, 18, 18),
-    new THREE.MeshStandardMaterial({ color: 0x2f8f3a, roughness: 1 })
-  );
+  const crown = new THREE.Mesh(new THREE.SphereGeometry(0.9, 18, 18), treeLeafMaterial);
   crown.position.y = 1.8;
   tree.add(crown);
 
@@ -183,10 +218,7 @@ function createTree(x, z) {
 }
 
 function spawnLog(x, z) {
-  const log = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.16, 0.16, 0.5, 10),
-    new THREE.MeshStandardMaterial({ color: 0x9a6232, roughness: 1 })
-  );
+  const log = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.5, 10), logMaterial);
   log.rotation.z = Math.PI / 2;
   log.position.set(x, 0.18, z);
   scene.add(log);
@@ -281,6 +313,8 @@ function updatePlayer(delta) {
   const move = getMoveInput();
   if (move.lengthSq() > 1) move.normalize();
 
+  isMoving = move.lengthSq() > 0.001;
+
   player.position.x += move.x * player.speed * delta;
   player.position.z += move.y * player.speed * delta;
 
@@ -292,10 +326,10 @@ function updatePlayer(delta) {
     player.position.z *= scale;
   }
 
-  playerGroup.position.copy(player.position);
+  playerRoot.position.copy(player.position);
 
-  if (move.lengthSq() > 0.001) {
-    playerGroup.rotation.y = Math.atan2(move.x, move.y);
+  if (isMoving) {
+    playerRoot.rotation.y = Math.atan2(move.x, move.y);
   }
 }
 
@@ -333,8 +367,6 @@ function updateChopping(delta) {
     chopTimer += delta;
     const pulse = 0.9 + Math.sin(chopTimer * 20) * 0.08;
     chopRange.scale.setScalar(pulse);
-    axe.rotation.z = Math.sin(chopTimer * 20) * 0.6;
-    axeHead.rotation.z = axe.rotation.z;
 
     if (chopTimer >= 0.45) {
       chopTimer = 0;
@@ -351,8 +383,6 @@ function updateChopping(delta) {
   } else {
     chopTimer = 0;
     chopRange.scale.setScalar(1);
-    axe.rotation.z = 0;
-    axeHead.rotation.z = 0;
   }
 }
 
@@ -371,6 +401,33 @@ function updateLogs(delta) {
   }
 }
 
+function updateCharacterAnimation(delta) {
+  animationTime += delta;
+
+  let walkSwing = 0;
+  let walkBounce = 0;
+  let chopSwing = 0;
+
+  if (isMoving) {
+    walkSwing = Math.sin(animationTime * 10) * 0.7;
+    walkBounce = Math.abs(Math.sin(animationTime * 10)) * 0.08;
+  }
+
+  if (chopping) {
+    chopSwing = Math.sin(animationTime * 20) * 1.1;
+  }
+
+  playerGroup.position.y = walkBounce;
+  leftLegPivot.rotation.x = walkSwing;
+  rightLegPivot.rotation.x = -walkSwing;
+  leftArmPivot.rotation.x = -walkSwing * 0.6;
+  rightArmPivot.rotation.x = walkSwing * 0.35 - Math.max(0, chopSwing);
+  rightArmPivot.rotation.z = -0.15 - Math.max(0, chopSwing) * 0.2;
+  leftArmPivot.rotation.z = 0.08;
+  torso.rotation.z = isMoving ? Math.sin(animationTime * 10) * 0.04 : 0;
+  head.rotation.z = isMoving ? Math.sin(animationTime * 5) * 0.05 : 0;
+}
+
 function updateHud() {
   hud.innerHTML = `Wood ${woodCount}<br>Coins ${coins}<br>Hit Power ${hitPower}<br>${chopping ? "Chopping" : selling ? "Selling" : "Move near a tree"}`;
   upgradeButton.textContent = `Upgrade Hit (${upgradeCost})`;
@@ -379,7 +436,7 @@ function updateHud() {
 function updateCamera(delta) {
   const targetPosition = player.position.clone().add(cameraOffset);
   camera.position.lerp(targetPosition, 4 * delta);
-  camera.lookAt(player.position.x, 0, player.position.z);
+  camera.lookAt(player.position.x, 0.8, player.position.z);
 }
 
 window.addEventListener("resize", () => {
@@ -398,6 +455,7 @@ function animate() {
   updateSelling();
   updateChopping(delta);
   updateLogs(delta);
+  updateCharacterAnimation(delta);
   updateHud();
   updateCamera(delta);
 
